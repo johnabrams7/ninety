@@ -31,6 +31,8 @@ Most habit apps punish you the moment a streak breaks. Ninety assumes real life 
 - Early warning when archiving a habit under 14 days old
 - 14-day cooldown on resets, so "forgive and restart" cannot become a daily escape hatch
 - Forgive-and-restart with a short reflection
+- Backdate a habit’s start date at creation or later. Days since then count as done, and you can correct any day individually.
+- Per-habit calendar to review and edit your history. Edited days are marked “M”.
 - Alignment prompt for habits that keep getting skipped
 - Replacement-habit pairing when you quit something
 - Email and password accounts with per-user data (Supabase, row-level security)
