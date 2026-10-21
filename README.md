@@ -2,36 +2,37 @@
 
 **A habit tracker built around a percentage, not a streak.**
 
-Most habit apps punish you the moment a streak breaks. Ninety assumes real life is noisy. It tracks adherence as a percentage, treats 90% or more as a true habit, and when you slip it shows exactly how many clean days it takes to get back above the line.
+This app is not about perfection. At least 90% is the goal. 100% is great too, but it is not required. Ninety is an alternative to perfection streaks, built to help mitigate the abstinence violation effect, where a single slip spirals into giving up entirely.
 
-> Status: work in progress. The adherence engine and data layer are built and tested. The full UI is being ported from the standalone prototype.
+Most habit apps punish you the moment a streak breaks. Ninety assumes real life is noisy. It tracks adherence as a percentage, and when you slip it shows exactly how many clean days it takes to get back above the line.
+
+> Status: work in progress. The adherence engine, Supabase data layer, and UI are built. The engine and row mapping are unit tested.
 
 ## The idea
 
-- **90% is the target, not 100%.** Illness, travel, and accidents happen. A habit in the 90 to 100% range is a habit. Around 70% is the floor where recovery is still realistic.
+- **At least 90% is the goal.** Real life has illness, travel, and accidents, so a habit in the 90 to 100% range still counts as a strong habit.
+- **Two lines on the dial.** Around 70% is the floor. Below it, you are still actively working on the habit. At 90% or above, it is the habit.
+- **Lapsed is a signal, not a verdict.** Under 70% means your brain's wiring around the habit has weakened and it is worth reassessing how serious you are about it. That might mean chaining a complementary habit onto it for encouragement, or cutting out something that competes for the same time and willpower, to pull it back above 70%. Lapsed never means you have to give the habit up.
 - **A slip is data, not a reset.** The number dips and climbs back. No "day one again" cliff.
 - **Recovery math up front.** After a slip the app tells you how many clean days get you back above 90%, so a bad week becomes a plan.
 - **Streaks are optional.** They are tracked but can be hidden. The percentage is the focus.
-- **Honest about who it is for.** Ninety suits habits where about 90% is realistic. Habits tied to a medical condition or clinical-level substance dependency call for full abstinence, and the app says so.
+- **Use your own discretion.** These numbers are a recommended read, not a rule.
+- **Honest about who it is for.** Ninety suits habits where about 90% is realistic. Habits tied to a serious history, such as a medical condition or a clinical-level substance dependency, call for full abstinence, and the app says so.
 
 ## Features
 
-Built into the engine and tests:
-
 - Adherence percentage over active days, with bands: habit (90+), building (70 to 90), lapsed (under 70)
-- Days-to-recover calculation, checked against a brute-force simulation
-- Current and longest streak
-- Overall adherence pooled across habits
+- Days-to-recover and slack-days calculations: how many clean days get you back to 90%, and how many slips you can still absorb
+- Current and longest streak, with a toggle to hide streaks
+- Overall adherence pooled across active habits
 - Archive and restart that keep history. Time spent archived never counts against the percentage
 - Early warning when archiving a habit under 14 days old
 - 14-day cooldown on resets, so "forgive and restart" cannot become a daily escape hatch
-
-In the data layer and prototype:
-
-- Email and password accounts with per-user data (Supabase, row-level security)
 - Forgive-and-restart with a short reflection
 - Alignment prompt for habits that keep getting skipped
 - Replacement-habit pairing when you quit something
+- Email and password accounts with per-user data (Supabase, row-level security)
+- Light and dark theme, mobile-first layout
 
 ## Tech
 
@@ -49,7 +50,7 @@ The engine takes plain habit objects and returns numbers, so it can be tested wi
 1. Create a free project at [supabase.com](https://supabase.com).
 2. In the dashboard open SQL Editor, paste `supabase/schema.sql`, and run it.
 3. Under Authentication, make sure the Email provider is on. While developing, you can turn off "Confirm email".
-4. Copy `.env.example` to `.env.local` and fill in your project URL and public (anon or publishable) key from the API settings. Never put the `service_role` key in the front end.
+4. Copy `.env.example` to `.env.local` and fill in your project URL (ending at `.supabase.co`) and public (anon or publishable) key from the API settings. Never put the `service_role` key in the front end.
 5. Install and run:
 
 ```bash
@@ -69,6 +70,7 @@ npm test
 src/engine/       adherence logic: percentage, recovery, streaks, archive, reset
 src/data/         Supabase client, queries, and row-to-engine mapping
 src/auth/         email and password sign-in, session hook
+src/components/   rings, habit cards, add-habit sheet, tracker view
 supabase/         schema.sql with tables and row-level security
 prototype/        standalone visual prototype (open ninety.html in a browser)
 ```
@@ -85,9 +87,7 @@ Only days inside active periods are evaluated. Past days you did not log count a
 
 ## Roadmap
 
-- Port the colorful prototype UI to React on top of the data layer
 - Per-habit slip rules (for example zero drinks versus one or two)
-- Overall score that excludes archived habits
 - AI quote and advice message after a missed day, tuned to the habit's age and your real numbers
 - Fuzzy duplicate detection and suggested habit pairings
 - Export and import of your data
