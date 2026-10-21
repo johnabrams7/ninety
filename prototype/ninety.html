@@ -326,7 +326,7 @@ label.field { display: grid; gap: 6px; font-weight: 700; font-size: 13px; }
     var active = S.habits.filter(function (h) { return !isArchived(h); }), arch = S.habits.filter(isArchived);
     var g = band(globalAdh(active).pct), html;
     document.body.className = 'band-' + g;
-    html = '<header class="top"><div class="brand">Ninety<small>Aim for 90%. Perfect is not the goal.</small></div><button class="add-btn" data-act="open-add">+ Habit</button></header>' +
+    html = '<header class="top"><div class="brand">Ninety<small>Aim for 90%+. Perfect is not the goal.</small></div><button class="add-btn" data-act="open-add">+ Habit</button></header>' +
       summaryView(active) +
       '<nav class="tabs" aria-label="Views"><button data-act="tab" data-v="today" aria-pressed="' + (ui.tab === 'today') + '">Today</button><button data-act="tab" data-v="archive" aria-pressed="' + (ui.tab === 'archive') + '">Archive' + (arch.length ? ' (' + arch.length + ')' : '') + '</button></nav>' +
       (ui.adding ? sheetView() : '') +

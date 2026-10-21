@@ -65,7 +65,7 @@ export function Tracker() {
   return (
     <>
       <header className="top">
-        <div className="brand">Ninety<small>Aim for 90%. Perfect is not the goal.</small></div>
+        <div className="brand">Ninety<small>Aim for 90%+. Perfection is not the goal.</small></div>
         <button className="add-btn" onClick={() => { setAdding(true); setTab('today') }}>+ Habit</button>
       </header>
 
