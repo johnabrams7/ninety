@@ -1,4 +1,5 @@
 import { diffDays } from './dates'
+import { currentMode } from './tracking'
 import {
   EARLY_WARNING_DAYS,
   RESET_COOLDOWN_DAYS,
@@ -55,5 +56,12 @@ export function daysUntilResetAllowed(habit: Habit, today: DateStr, cooldown = R
 /** Reset = wipe logs and start a fresh period; blocked during cooldown. Returns null if blocked. */
 export function reset(habit: Habit, today: DateStr): Habit | null {
   if (!canReset(habit, today)) return null
-  return { ...habit, logs: {}, periods: [{ start: today }], lastResetOn: today }
+  return {
+    ...habit,
+    logs: {},
+    edited: {},
+    periods: [{ start: today }],
+    modeHistory: [{ from: today, mode: currentMode(habit) }],
+    lastResetOn: today,
+  }
 }

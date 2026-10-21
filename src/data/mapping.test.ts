@@ -37,6 +37,20 @@ describe('rowsToHabits', () => {
     expect(out[1].lastResetOn).toBe('2026-06-01')
     expect(out[0].lastResetOn).toBeUndefined()
   })
+  it('carries logging mode history and edited days through', () => {
+    const rows = rowsToHabits(
+      [{ id: 'a', name: 'Soda', kind: 'remove' as const, category: null, mode_history: [{ from: '2026-07-10', mode: 'manual' as const }, { from: '2026-07-01', mode: 'auto' as const }] }],
+      [{ habit_id: 'a', start_date: '2026-07-01', end_date: null }],
+      [{ habit_id: 'a', log_date: '2026-07-02', adhered: false, edited: true }, { habit_id: 'a', log_date: '2026-07-03', adhered: true }],
+      [],
+    )
+    expect(rows[0].modeHistory).toEqual([{ from: '2026-07-01', mode: 'auto' }, { from: '2026-07-10', mode: 'manual' }])
+    expect(rows[0].edited).toEqual({ '2026-07-02': true })
+  })
+  it('leaves modeHistory unset for rows from before logging modes existed', () => {
+    expect(out[0].modeHistory).toBeUndefined()
+    expect(out[0].edited).toBeUndefined()
+  })
   it('produces habits the engine can score', () => {
     expect(adherence(out[0], '2026-07-03')).toEqual({ hits: 1, total: 2, pct: 50 })
   })

@@ -9,6 +9,19 @@ export interface ActivePeriod {
   end?: DateStr
 }
 
+/**
+ * How days get classified when the user hasn't logged them.
+ * - auto:   unlogged days count as hits; the user only logs slips.
+ * - manual: unlogged days count as misses; the user logs wins.
+ */
+export type LoggingMode = 'auto' | 'manual'
+
+/** From `from` onward (inclusive) the habit uses `mode`. Oldest first. */
+export interface ModeChange {
+  from: DateStr
+  mode: LoggingMode
+}
+
 export interface Habit {
   id: string
   name: string
@@ -16,8 +29,12 @@ export interface Habit {
   category?: string
   /** Active periods, oldest first. Gaps between periods = archived time (not counted). */
   periods: ActivePeriod[]
-  /** true = adhered that day, false = missed. Unlogged past days count as missed. */
+  /** Explicit entries: true = adhered that day, false = slipped. Unlogged days follow the logging mode. */
   logs: Record<DateStr, boolean>
+  /** Days whose entry was changed after the fact (drives the "M" badge). */
+  edited?: Record<DateStr, boolean>
+  /** Logging mode over time. Missing or empty means manual, the original behavior. */
+  modeHistory?: ModeChange[]
   /** Last time the user reset this habit, for the cooldown guardrail. */
   lastResetOn?: DateStr
 }

@@ -1,4 +1,5 @@
 import { addDays, eachDay, minDate } from './dates'
+import { dayResult } from './tracking'
 import {
   FLOOR_PCT,
   HABIT_PCT,
@@ -11,8 +12,8 @@ import {
 /**
  * Days that count toward adherence, oldest first.
  * - Only days inside active periods (archived time is skipped).
- * - Past days count whether logged or not (unlogged = missed).
- * - Today only counts once the user has logged it, so the day isn't a miss before it's over.
+ * - Past days always count. An unlogged day is a hit in auto mode and a miss in manual mode.
+ * - Today only counts once the user has logged it, so the day isn't scored before it's over.
  */
 export function evaluatedDays(habit: Habit, today: DateStr): DateStr[] {
   const lastFullDay = addDays(today, -1)
@@ -28,7 +29,7 @@ export function evaluatedDays(habit: Habit, today: DateStr): DateStr[] {
 
 export function adherence(habit: Habit, today: DateStr): Adherence {
   const days = evaluatedDays(habit, today)
-  const hits = days.filter((d) => habit.logs[d] === true).length
+  const hits = days.filter((d) => dayResult(habit, d)).length
   const total = days.length
   return { hits, total, pct: total === 0 ? 100 : (hits / total) * 100 }
 }
@@ -60,7 +61,7 @@ export function streaks(habit: Habit, today: DateStr): { current: number; longes
   let current = 0
   let longest = 0
   for (const d of days) {
-    if (habit.logs[d] === true) {
+    if (dayResult(habit, d)) {
       current += 1
       longest = Math.max(longest, current)
     } else {

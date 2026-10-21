@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   adherence, archive, band, canReset, daysToRecover, globalAdherence, habitAgeDays,
-  logDay, needsEarlyWarning, slackDays, reset, restart, streaks, daysUntilResetAllowed, addDays, eachDay,
+  logDay, needsEarlyWarning, slackDays, setMode, modeOn, editDay, defaultModeFor, reset, restart, streaks, daysUntilResetAllowed, addDays, eachDay,
   type Habit,
 } from './index'
 
@@ -132,5 +132,66 @@ describe('slackDays', () => {
         expect(slackDays({ hits, total })).toBe(m)
       }
     }
+  })
+})
+
+describe('logging modes', () => {
+  const base = (modeHistory: Habit['modeHistory'], logs: Record<string, boolean> = {}): Habit => ({
+    id: 'm', name: 'Soda', kind: 'remove', periods: [{ start: '2026-10-01' }], logs, modeHistory,
+  })
+  it('auto: unlogged past days are hits, a logged slip is a miss', () => {
+    const h = base([{ from: '2026-10-01', mode: 'auto' }], { '2026-10-03': false })
+    expect(adherence(h, '2026-10-11')).toEqual({ hits: 9, total: 10, pct: 90 })
+  })
+  it('manual: unlogged past days are misses, a logged win is a hit', () => {
+    const h = base([{ from: '2026-10-01', mode: 'manual' }], { '2026-10-02': true })
+    expect(adherence(h, '2026-10-11')).toEqual({ hits: 1, total: 10, pct: 10 })
+  })
+  it('habits with no mode history behave as manual (original behavior)', () => {
+    expect(adherence(base(undefined), '2026-10-04').hits).toBe(0)
+  })
+  it('today stays unscored until logged, in both modes', () => {
+    expect(adherence(base([{ from: '2026-10-01', mode: 'auto' }]), '2026-10-01').total).toBe(0)
+    const logged = logDay(base([{ from: '2026-10-01', mode: 'auto' }]), '2026-10-01', false)
+    expect(adherence(logged, '2026-10-01')).toEqual({ hits: 0, total: 1, pct: 0 })
+  })
+  it('switching mode never re-scores earlier days', () => {
+    const manual = base([{ from: '2026-10-01', mode: 'manual' }])
+    const before = adherence(manual, '2026-10-11')
+    const switched = setMode(manual, 'auto', '2026-10-11')
+    expect(adherence(switched, '2026-10-11')).toEqual(before) // Oct 1-10 stay misses
+    const later = adherence(switched, '2026-10-14') // Oct 11-13 now auto hits
+    expect(later).toEqual({ hits: 3, total: 13, pct: (3 / 13) * 100 })
+    expect(modeOn(switched, '2026-10-10')).toBe('manual')
+    expect(modeOn(switched, '2026-10-11')).toBe('auto')
+  })
+  it('switching twice on the same day replaces that day instead of stacking', () => {
+    let h = base([{ from: '2026-10-01', mode: 'auto' }])
+    h = setMode(h, 'manual', '2026-10-05')
+    h = setMode(h, 'auto', '2026-10-05')
+    expect(h.modeHistory).toEqual([{ from: '2026-10-01', mode: 'auto' }])
+  })
+  it('streaks follow the mode defaults', () => {
+    const h = base([{ from: '2026-10-01', mode: 'auto' }], { '2026-10-04': false })
+    expect(streaks(h, '2026-10-08')).toEqual({ current: 3, longest: 3 })
+  })
+  it('editDay flags retroactive entries and clearing removes the flag', () => {
+    let h = base([{ from: '2026-10-01', mode: 'auto' }])
+    h = editDay(h, '2026-10-02', false)
+    expect(h.logs['2026-10-02']).toBe(false)
+    expect(h.edited?.['2026-10-02']).toBe(true)
+    h = editDay(h, '2026-10-02', null)
+    expect('2026-10-02' in h.logs).toBe(false)
+    expect(h.edited?.['2026-10-02']).toBeUndefined()
+  })
+  it('reset keeps the current mode and clears edits', () => {
+    const h = editDay(base([{ from: '2026-10-01', mode: 'auto' }]), '2026-10-02', false)
+    const r = reset(h, '2026-10-20')!
+    expect(r.modeHistory).toEqual([{ from: '2026-10-20', mode: 'auto' }])
+    expect(r.edited).toEqual({})
+  })
+  it('defaults: quitting suggests auto, building suggests manual', () => {
+    expect(defaultModeFor('remove')).toBe('auto')
+    expect(defaultModeFor('add')).toBe('manual')
   })
 })
