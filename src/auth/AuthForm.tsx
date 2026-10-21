@@ -12,35 +12,32 @@ export function AuthForm() {
     e.preventDefault()
     setBusy(true)
     setMsg('')
-    const { data, error } =
-      mode === 'in'
-        ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({ email, password })
+    try {
+      const { data, error } =
+        mode === 'in'
+          ? await supabase.auth.signInWithPassword({ email, password })
+          : await supabase.auth.signUp({ email, password })
+      if (error) setMsg(error.message)
+      else if (mode === 'up' && !data.session) setMsg('Check your email to confirm your account, then sign in.')
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : 'Something went wrong.')
+    }
     setBusy(false)
-    if (error) setMsg(error.message)
-    else if (mode === 'up' && !data.session) setMsg('Check your email to confirm your account, then sign in.')
   }
 
   return (
-    <form className="auth" onSubmit={submit}>
+    <form className="sheet" onSubmit={submit}>
       <h2>{mode === 'in' ? 'Sign in' : 'Create your account'}</h2>
-      <label>
+      <label className="field" htmlFor="auth-email">
         Email
-        <input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+        <input id="auth-email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
       </label>
-      <label>
+      <label className="field" htmlFor="auth-password">
         Password
-        <input
-          type="password"
-          required
-          minLength={8}
-          autoComplete={mode === 'in' ? 'current-password' : 'new-password'}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+        <input id="auth-password" type="password" required minLength={8} autoComplete={mode === 'in' ? 'current-password' : 'new-password'} value={password} onChange={(e) => setPassword(e.target.value)} />
       </label>
-      <button type="submit" disabled={busy}>{mode === 'in' ? 'Sign in' : 'Sign up'}</button>
-      {msg && <p role="status">{msg}</p>}
+      <button type="submit" className="btn primary" disabled={busy}>{mode === 'in' ? 'Sign in' : 'Sign up'}</button>
+      {msg && <p className="auth-msg" role="status">{msg}</p>}
       <button type="button" className="link" onClick={() => setMode(mode === 'in' ? 'up' : 'in')}>
         {mode === 'in' ? 'New here? Create an account' : 'Have an account? Sign in'}
       </button>
