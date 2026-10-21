@@ -2,8 +2,9 @@ import { useState, type FormEvent } from 'react'
 import { defaultModeFor, type HabitKind, type LoggingMode } from '../engine'
 import { MODE_COPY } from './HabitCard'
 
-const COMMON = ['Walk 20 minutes', 'Drink water', 'Stretch', 'Read 10 pages', 'Sleep by 11', 'No sugar']
-const REPLACE = ['Walk 20 minutes', 'Stretch', 'Read 10 pages', 'Call a friend']
+const ADD_SUGGESTIONS = ['Walking', 'Weightlifting', 'Stretching', 'Reading', 'Meditation', 'Journaling', 'Gallon of water', 'Cold shower', 'Floss', 'Bed by 10pm']
+const QUIT_SUGGESTIONS = ['Alcohol', 'Smoking', 'Vaping', 'Soda', 'Sweets', 'Junk food', 'Caffeine', 'Social media', 'Phone in bed', 'Nail biting']
+const REPLACE = ['Walking', 'Stretching', 'Reading', 'Meditation']
 
 export function AddSheet({ onAdd, onCancel }: { onAdd: (name: string, kind: HabitKind, pair: string, mode: LoggingMode) => void; onCancel: () => void }) {
   const [kind, setKind] = useState<HabitKind>('add')
@@ -26,14 +27,17 @@ export function AddSheet({ onAdd, onCancel }: { onAdd: (name: string, kind: Habi
       </div>
       <label className="field" htmlFor="new-name">
         Name
-        <input id="new-name" type="text" maxLength={40} value={name} onChange={(e) => setName(e.target.value)} placeholder={kind === 'remove' ? 'e.g. Soda' : 'e.g. Walk 20 minutes'} />
+        <input id="new-name" type="text" maxLength={40} value={name} onChange={(e) => setName(e.target.value)} placeholder={kind === 'remove' ? 'e.g. Soda' : 'e.g. Walking'} />
       </label>
-      {kind === 'add' ? (
-        <div>
-          <p className="hint" style={{ marginBottom: 8 }}>Common picks</p>
-          <div className="chips">{COMMON.map((c) => <button type="button" key={c} className="chip" onClick={() => setName(c)}>{c}</button>)}</div>
-        </div>
-      ) : (
+      <label className="field" htmlFor="suggest">
+        Common suggestions
+        <select id="suggest" value="" onChange={(e) => { if (e.target.value) setName(e.target.value) }}>
+          <option value="">Pick one to start…</option>
+          {(kind === 'add' ? ADD_SUGGESTIONS : QUIT_SUGGESTIONS).map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <span className="hint">Pick one to start, then edit the name to make it more specific.</span>
+      </label>
+      {kind === 'remove' && (
         <div>
           <p className="hint" style={{ marginBottom: 8 }}>Quitting sticks better with a replacement you can hit about 90% of days. Pick one to add too (optional).</p>
           <div className="chips">{REPLACE.map((c) => <button type="button" key={c} className="chip" aria-pressed={pair === c} onClick={() => setPair(pair === c ? '' : c)}>{c}</button>)}</div>
