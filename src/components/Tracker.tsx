@@ -38,7 +38,8 @@ export function Tracker() {
   const gBand = band(g.pct)
   const gNeed = daysToRecover(g)
 
-  useEffect(() => { document.body.className = `band-${gBand}` }, [gBand])
+  const loading = habits === null
+  useEffect(() => { document.body.className = loading ? '' : `band-${gBand}` }, [gBand, loading])
 
   const toggleStreaks = () => {
     const next = !showStreaks
@@ -93,9 +94,9 @@ export function Tracker() {
 
       {error && <p className="error" role="alert">{error}</p>}
 
-      <section className={`summary band-${gBand}`} aria-label="Overall adherence">
-        <Ring pct={g.pct} label="overall" />
-        <div><h2>{BAND_LABEL[gBand]}</h2><p>{habits === null ? 'Loading your habits…' : summary}</p></div>
+      <section className={`summary${loading ? '' : ` band-${gBand}`}`} aria-label="Overall adherence" aria-busy={loading}>
+        <Ring pct={g.pct} label="overall" loading={loading} />
+        <div><h2>{loading ? 'Loading…' : BAND_LABEL[gBand]}</h2><p>{loading ? 'Loading your habits…' : summary}</p></div>
       </section>
 
       <nav className="tabs" aria-label="Views">
