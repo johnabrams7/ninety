@@ -103,7 +103,6 @@ export function HabitCard(p: Props) {
         <div className="row">
           <button className="btn primary" onClick={() => p.onEditDay(d, true)}>Mark as done</button>
           <button className="btn slip" onClick={() => p.onEditDay(d, false)}>Mark as slipped</button>
-          {logged && <button className="btn ghost" onClick={() => p.onEditDay(d, null)}>Back to {modeOn(h, d) === 'auto' ? 'automatic' : 'unlogged'}</button>}
           <button className="btn ghost" onClick={cancel}>Cancel</button>
         </div>
       </div>
