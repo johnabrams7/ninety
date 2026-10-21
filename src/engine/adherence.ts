@@ -81,3 +81,11 @@ export function globalAdherence(habits: Habit[], today: DateStr): Adherence {
   }
   return { hits, total, pct: total === 0 ? 100 : (hits / total) * 100 }
 }
+
+/** How many slips you can absorb right now and still stay at or above `targetPct`. */
+export function slackDays(
+  { hits, total }: Pick<Adherence, 'hits' | 'total'>,
+  targetPct: number = HABIT_PCT,
+): number {
+  return Math.max(0, Math.floor((100 * hits - targetPct * total) / targetPct))
+}
