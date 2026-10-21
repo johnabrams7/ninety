@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   adherence, archive, band, canReset, daysToRecover, globalAdherence, habitAgeDays,
-  logDay, needsEarlyWarning, reset, restart, streaks, daysUntilResetAllowed, addDays, eachDay,
+  logDay, needsEarlyWarning, slackDays, reset, restart, streaks, daysUntilResetAllowed, addDays, eachDay,
   type Habit,
 } from './index'
 
@@ -119,5 +119,18 @@ describe('dates', () => {
     expect(addDays('2026-02-28', 1)).toBe('2026-03-01')
     expect(addDays('2028-02-28', 1)).toBe('2028-02-29')
     expect(eachDay('2026-10-30', '2026-11-02')).toHaveLength(4)
+  })
+})
+
+describe('slackDays', () => {
+  it('matches brute force: most misses you can absorb and stay >= 90%', () => {
+    for (let total = 0; total <= 60; total++) {
+      for (let hits = 0; hits <= total; hits++) {
+        if (100 * hits < 90 * total) { expect(slackDays({ hits, total })).toBe(0); continue }
+        let m = 0
+        while (100 * hits >= 90 * (total + m + 1)) m++
+        expect(slackDays({ hits, total })).toBe(m)
+      }
+    }
   })
 })
