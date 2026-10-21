@@ -1,21 +1,23 @@
 import { useState, type FormEvent } from 'react'
-import { defaultModeFor, type HabitKind, type LoggingMode } from '../engine'
+import { addDays, defaultModeFor, type DateStr, type HabitKind, type LoggingMode } from '../engine'
+import { DatePick, longDate } from './DatePick'
 import { MODE_COPY } from './HabitCard'
 
 const ADD_SUGGESTIONS = ['Walking', 'Weightlifting', 'Stretching', 'Reading', 'Meditation', 'Journaling', 'Gallon of water', 'Cold shower', 'Floss', 'Bed by 10pm']
 const QUIT_SUGGESTIONS = ['Alcohol', 'Smoking', 'Vaping', 'Soda', 'Sweets', 'Junk food', 'Caffeine', 'Social media', 'Phone in bed', 'Nail biting']
 const REPLACE = ['Walking', 'Stretching', 'Reading', 'Meditation']
 
-export function AddSheet({ onAdd, onCancel }: { onAdd: (name: string, kind: HabitKind, pair: string, mode: LoggingMode) => void; onCancel: () => void }) {
+export function AddSheet({ today, onAdd, onCancel }: { today: DateStr; onAdd: (name: string, kind: HabitKind, pair: string, mode: LoggingMode, start: DateStr) => void; onCancel: () => void }) {
   const [kind, setKind] = useState<HabitKind>('add')
   const [mode, setMode] = useState<LoggingMode>(defaultModeFor('add'))
   const [name, setName] = useState('')
   const [pair, setPair] = useState('')
+  const [start, setStart] = useState<DateStr>(today)
 
   const pickKind = (k: HabitKind) => { setKind(k); setMode(defaultModeFor(k)); setPair('') }
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    if (name.trim()) onAdd(name.trim(), kind, kind === 'remove' ? pair : '', mode)
+    if (name.trim()) onAdd(name.trim(), kind, kind === 'remove' ? pair : '', mode, start)
   }
 
   return (
@@ -28,6 +30,14 @@ export function AddSheet({ onAdd, onCancel }: { onAdd: (name: string, kind: Habi
       <label className="field" htmlFor="new-name">
         Name
         <input id="new-name" type="text" maxLength={40} value={name} onChange={(e) => setName(e.target.value)} placeholder={kind === 'remove' ? 'e.g. Soda' : 'e.g. Walking'} />
+      </label>
+      <label className="field" htmlFor="started-on">
+        Started on
+        <DatePick id="started-on" value={start} min={addDays(today, -1825)} max={today} label="Started on" onChange={setStart} />
+        <span className="hint">
+          {start < today ? `Every day from ${longDate(start)} until today counts as done. You can fix any day afterward. ` : ''}
+          Be honest with yourself. The best results come from accuracy.
+        </span>
       </label>
       <label className="field" htmlFor="suggest">
         Common suggestions

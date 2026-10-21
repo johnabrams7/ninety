@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { addHabit, archiveHabit, deleteHabit, fetchHabits, resetHabit, restartHabit, setLog, setModeHistory } from '../data/repo'
-import { band, currentMode, daysToRecover, globalAdherence, isArchived, localToday, setMode, type Habit, type HabitKind, type LoggingMode } from '../engine'
+import { addHabit, archiveHabit, deleteHabit, fetchHabits, resetHabit, restartHabit, setLog, setModeHistory, setStartDate } from '../data/repo'
+import { backdateStart, backfillDays, band, currentMode, daysToRecover, globalAdherence, isArchived, localToday, setMode, type DateStr, type Habit, type HabitKind, type LoggingMode } from '../engine'
 import { AddSheet } from './AddSheet'
 import { ArchiveCard, BAND_LABEL, HabitCard, type Confirm } from './HabitCard'
 import { Ring } from './Ring'
@@ -46,10 +46,10 @@ export function Tracker() {
     try { localStorage.setItem(STREAK_KEY, next ? '1' : '0') } catch { /* storage unavailable */ }
   }
 
-  const add = (name: string, kind: HabitKind, pair: string, mode: LoggingMode) => {
+  const add = (name: string, kind: HabitKind, pair: string, mode: LoggingMode, start: DateStr) => {
     setAdding(false)
     void run(async () => {
-      await addHabit(name, kind, today, mode)
+      await addHabit(name, kind, start, mode, backfillDays(start, today, mode))
       if (pair) await addHabit(pair, 'add', today, 'manual')
     })
   }
@@ -59,6 +59,21 @@ export function Tracker() {
     const next = setMode(h, mode, today)
     setError('')
     void setModeHistory(h.id, next.modeHistory ?? []).then(refresh).catch((e: Error) => setError(e.message))
+  }
+
+  // Moving the start date keeps the settings panel open.
+  const changeStart = (h: Habit, newStart: DateStr) => {
+    const first = h.periods[0]
+    if (!first || newStart === first.start) return
+    const { habit: next, fill } = backdateStart(h, newStart, today)
+    setError('')
+    void setStartDate(h.id, first.start, next.periods[0].start, fill).then(refresh).catch((e: Error) => setError(e.message))
+  }
+
+  // Edits made from the calendar keep the calendar open.
+  const editDay = (h: Habit, date: DateStr, value: boolean | null) => {
+    const keep = confirm?.id === h.id && confirm.type === 'calendar'
+    void run(() => setLog(h.id, date, value, value !== null)).then(() => { if (keep) setConfirm({ id: h.id, type: 'calendar' }) })
   }
 
   const log = (h: Habit, v: boolean) => void run(() => setLog(h.id, today, h.logs[today] === v ? null : v))
@@ -88,7 +103,7 @@ export function Tracker() {
         <button aria-pressed={tab === 'archive'} onClick={() => { setTab('archive'); setConfirm(null) }}>Archive{archived.length ? ` (${archived.length})` : ''}</button>
       </nav>
 
-      {adding && <AddSheet onAdd={add} onCancel={() => setAdding(false)} />}
+      {adding && <AddSheet today={today} onAdd={add} onCancel={() => setAdding(false)} />}
 
       {tab === 'today' && habits !== null && active.length === 0 && <div className="empty">No active habits. Add one to begin.</div>}
       {tab === 'today' && active.map((h) => (
@@ -98,7 +113,8 @@ export function Tracker() {
           onLog={(v) => log(h, v)}
           onAsk={(type, date) => setConfirm({ id: h.id, type, date })}
           onSetMode={(mode) => changeMode(h, mode)}
-          onEditDay={(date, value) => void run(() => setLog(h.id, date, value, value !== null))}
+          onSetStart={(d) => changeStart(h, d)}
+          onEditDay={(date, value) => editDay(h, date, value)}
           onCancel={() => setConfirm(null)}
           onArchive={() => void run(() => archiveHabit(h.id, today))}
           onRestartFresh={(why) => void run(() => resetHabit(h.id, today, why, [{ from: today, mode: currentMode(h) }]))}

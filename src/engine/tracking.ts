@@ -1,3 +1,4 @@
+import { addDays, eachDay } from './dates'
 import type { DateStr, Habit, HabitKind, LoggingMode, ModeChange } from './types'
 
 /** Recommended default: quitting suits auto-track, building suits manual log. */
@@ -51,4 +52,29 @@ export function editDay(habit: Habit, date: DateStr, value: boolean | null): Hab
     edited[date] = true
   }
   return { ...habit, logs, edited }
+}
+
+/**
+ * Days that must be written as explicit wins when a habit starts on `start` and today is `today`.
+ * Auto-track needs none (unlogged days already count as hits); manual log needs one per past day.
+ */
+export const backfillDays = (start: DateStr, today: DateStr, mode: LoggingMode): DateStr[] =>
+  mode === 'manual' && start < today ? eachDay(start, addDays(today, -1)) : []
+
+/**
+ * Move the habit's start date (first period). Moving it earlier counts every new day as a success:
+ * automatically under auto-track, via the returned `fill` list under manual log. Existing entries are
+ * kept. Moving it later just stops counting the days before it. The date is clamped to the end of the
+ * first period (or today).
+ */
+export function backdateStart(habit: Habit, newStart: DateStr, today: DateStr): { habit: Habit; fill: DateStr[] } {
+  const first = habit.periods[0]
+  if (!first) return { habit, fill: [] }
+  const start = newStart > (first.end ?? today) ? (first.end ?? today) : newStart
+  const fill = start < first.start
+    ? eachDay(start, addDays(first.start, -1)).filter((d) => !(d in habit.logs) && modeOn(habit, d) === 'manual')
+    : []
+  const logs = { ...habit.logs }
+  for (const d of fill) logs[d] = true
+  return { habit: { ...habit, logs, periods: [{ ...first, start }, ...habit.periods.slice(1)] }, fill }
 }

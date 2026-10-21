@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   adherence, archive, band, canReset, daysToRecover, globalAdherence, habitAgeDays,
-  logDay, needsEarlyWarning, slackDays, setMode, modeOn, editDay, defaultModeFor, reset, restart, streaks, daysUntilResetAllowed, addDays, eachDay,
+  logDay, needsEarlyWarning, slackDays, setMode, modeOn, editDay, defaultModeFor, backdateStart, backfillDays, reset, restart, streaks, daysUntilResetAllowed, addDays, eachDay,
   type Habit,
 } from './index'
 
@@ -193,5 +193,40 @@ describe('logging modes', () => {
   it('defaults: quitting suggests auto, building suggests manual', () => {
     expect(defaultModeFor('remove')).toBe('auto')
     expect(defaultModeFor('add')).toBe('manual')
+  })
+})
+
+describe('backdating the start date', () => {
+  const h = (mode: 'auto' | 'manual', logs: Record<string, boolean> = {}): Habit => ({
+    id: 'b', name: 'Soda', kind: 'remove', periods: [{ start: '2026-10-10' }], logs, modeHistory: [{ from: '2026-10-10', mode }],
+  })
+  it('manual: earlier start fills every new day as a win, keeping existing entries', () => {
+    const { habit, fill } = backdateStart(h('manual', { '2026-10-08': false }), '2026-10-05', '2026-10-15')
+    expect(fill).toEqual(['2026-10-05', '2026-10-06', '2026-10-07', '2026-10-09'])
+    expect(habit.logs['2026-10-08']).toBe(false)
+    expect(habit.periods[0].start).toBe('2026-10-05')
+    expect(adherence(habit, '2026-10-10').pct).toBe(80)
+  })
+  it('auto: earlier start needs no fill, the new days are hits by default', () => {
+    const { habit, fill } = backdateStart(h('auto'), '2026-10-05', '2026-10-15')
+    expect(fill).toEqual([])
+    expect(adherence(habit, '2026-10-10')).toEqual({ hits: 5, total: 5, pct: 100 })
+  })
+  it('a backfilled day can still be edited to a slip', () => {
+    const { habit } = backdateStart(h('manual'), '2026-10-05', '2026-10-15')
+    const e = editDay(habit, '2026-10-06', false)
+    expect(adherence(e, '2026-10-10')).toEqual({ hits: 4, total: 5, pct: 80 })
+    expect(e.edited?.['2026-10-06']).toBe(true)
+  })
+  it('later start stops counting earlier days; start is clamped to today', () => {
+    const later = backdateStart(h('manual', { '2026-10-10': true }), '2026-10-12', '2026-10-15')
+    expect(later.fill).toEqual([])
+    expect(later.habit.periods[0].start).toBe('2026-10-12')
+    expect(backdateStart(h('manual'), '2027-01-01', '2026-10-15').habit.periods[0].start).toBe('2026-10-15')
+  })
+  it('backfillDays: manual lists past days up to yesterday, auto lists none', () => {
+    expect(backfillDays('2026-10-13', '2026-10-15', 'manual')).toEqual(['2026-10-13', '2026-10-14'])
+    expect(backfillDays('2026-10-13', '2026-10-15', 'auto')).toEqual([])
+    expect(backfillDays('2026-10-15', '2026-10-15', 'manual')).toEqual([])
   })
 })

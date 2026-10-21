@@ -163,3 +163,19 @@ label.field { display: grid; gap: 6px; font-weight: 700; font-size: 13px; }
 .mode span { font-size: 13px; color: var(--muted); }
 .mode[aria-pressed="true"] { border-color: var(--accent); background: var(--card); }
 label.field .hint { font-weight: 400; }
+
+.datepick { position: relative; display: inline-flex; align-self: start; padding: 12px 14px; border-radius: 14px; background: var(--bg); border: 2px solid var(--line); font-weight: 700; font-size: 15px; cursor: pointer; }
+.datepick input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
+.cal { display: grid; gap: 8px; }
+.cal-head { display: flex; align-items: center; justify-content: space-between; }
+.cal-head .link { font-size: 22px; padding: 2px 12px; }
+.cal-head .link[disabled] { opacity: .3; cursor: not-allowed; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-grid .wk { text-align: center; font-size: 11px; font-weight: 700; color: var(--muted); }
+.cal-grid .day { aspect-ratio: 1; display: grid; place-content: center; border-radius: 10px; font-size: 13px; font-weight: 700; padding: 0; position: relative; }
+.cal-grid .day.off { color: var(--muted); opacity: .45; background: var(--track); }
+.cal-grid .day.hit { background: var(--good); color: #fff; }
+.cal-grid .day.miss { background: var(--bad); color: #fff; }
+.cal-grid .day.today { outline: 2px solid var(--accent); outline-offset: -2px; }
+.cal-grid .day.sel { outline: 3px solid var(--accent); outline-offset: 1px; }
+.cal-grid .day.edited::after { content: 'M'; position: absolute; top: 1px; right: 3px; font-size: 8px; font-weight: 800; }

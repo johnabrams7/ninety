@@ -17,11 +17,25 @@ export async function fetchHabits(): Promise<Habit[]> {
   return rowsToHabits(check(h) ?? [], check(p) ?? [], check(l) ?? [], check(r) ?? [])
 }
 
-export async function addHabit(name: string, kind: HabitKind, today: DateStr, mode: LoggingMode): Promise<void> {
-  const mode_history: ModeChange[] = [{ from: today, mode }]
+/** `start` may be in the past (backdating). `fill` = past days to record as wins (manual-log habits only). */
+export async function addHabit(name: string, kind: HabitKind, start: DateStr, mode: LoggingMode, fill: DateStr[] = []): Promise<void> {
+  const mode_history: ModeChange[] = [{ from: start, mode }]
   const row = check(await supabase.from('habits').insert({ name, kind, mode_history }).select('id').single<{ id: string }>())
   if (!row) throw new Error('Could not create habit')
-  check(await supabase.from('habit_periods').insert({ habit_id: row.id, start_date: today }))
+  check(await supabase.from('habit_periods').insert({ habit_id: row.id, start_date: start }))
+  await fillWins(row.id, fill)
+}
+
+async function fillWins(habitId: string, dates: DateStr[]): Promise<void> {
+  if (!dates.length) return
+  const rows = dates.map((d) => ({ habit_id: habitId, log_date: d, adhered: true, edited: false }))
+  check(await supabase.from('habit_logs').upsert(rows, { onConflict: 'habit_id,log_date' }))
+}
+
+/** Move the start of the habit's first period. `fill` = newly covered days to record as wins. */
+export async function setStartDate(habitId: string, oldStart: DateStr, newStart: DateStr, fill: DateStr[]): Promise<void> {
+  await fillWins(habitId, fill)
+  check(await supabase.from('habit_periods').update({ start_date: newStart }).eq('habit_id', habitId).eq('start_date', oldStart))
 }
 
 /**

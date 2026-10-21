@@ -3,11 +3,13 @@ import {
   EARLY_WARNING_DAYS, addDays, adherence, band, currentMode, dayResult, daysToRecover, daysUntilResetAllowed,
   habitAgeDays, modeOn, slackDays, streaks, type Band, type DateStr, type Habit, type LoggingMode,
 } from '../engine'
+import { Calendar } from './Calendar'
+import { DatePick } from './DatePick'
 import { Ring } from './Ring'
 
 export const HUES = ['#6a5cff', '#12a8c9', '#e8528f', '#f08a24', '#3e9b4f']
 export const BAND_LABEL: Record<Band, string> = { habit: 'In the zone', building: 'Building', lapsed: 'Lapsed' }
-export type Confirm = { id: string; type: 'archive' | 'restart' | 'delete' | 'settings' | 'edit'; date?: DateStr } | null
+export type Confirm = { id: string; type: 'archive' | 'restart' | 'delete' | 'settings' | 'edit' | 'calendar'; date?: DateStr } | null
 
 export const MODE_COPY: Record<LoggingMode, { title: string; blurb: string }> = {
   auto: { title: 'Auto-track', blurb: 'Days count automatically. Just mark your slips.' },
@@ -24,7 +26,8 @@ interface Props {
   showStreaks: boolean
   confirm: Confirm
   onLog: (v: boolean) => void
-  onAsk: (type: 'archive' | 'restart' | 'delete' | 'settings' | 'edit', date?: DateStr) => void
+  onAsk: (type: 'archive' | 'restart' | 'delete' | 'settings' | 'edit' | 'calendar', date?: DateStr) => void
+  onSetStart: (date: DateStr) => void
   onSetMode: (mode: LoggingMode) => void
   onEditDay: (date: DateStr, value: boolean | null) => void
   onCancel: () => void
@@ -89,6 +92,24 @@ export function HabitCard(p: Props) {
       </>
     )
 
+  const editPanel = (d: DateStr, cancel: () => void) => {
+    const logged = d in h.logs
+    const now = dayResult(h, d) ? 'a good day' : 'a slip'
+    return (
+      <div className="note align">
+        <p><b>Edit {dayLabel(d)}</b></p>
+        <p>Right now it counts as {now}{logged ? ' (logged)' : modeOn(h, d) === 'auto' ? ' (automatic)' : ' (nothing logged)'}.</p>
+        <p>Are you sure you want to manually modify this day? Be honest with yourself. The best results come from accuracy. Edited days show an M.</p>
+        <div className="row">
+          <button className="btn primary" onClick={() => p.onEditDay(d, true)}>Mark as done</button>
+          <button className="btn slip" onClick={() => p.onEditDay(d, false)}>Mark as slipped</button>
+          {logged && <button className="btn ghost" onClick={() => p.onEditDay(d, null)}>Back to {modeOn(h, d) === 'auto' ? 'automatic' : 'unlogged'}</button>}
+          <button className="btn ghost" onClick={cancel}>Cancel</button>
+        </div>
+      </div>
+    )
+  }
+
   let extra = null
   if (mine === 'settings')
     extra = (
@@ -100,27 +121,32 @@ export function HabitCard(p: Props) {
           ))}
         </div>
         <p className="hint" style={{ margin: '8px 0' }}>{MODE_COPY[mode].blurb} Changes apply from today forward. Days already counted are not re-scored.</p>
-        <div className="row"><button className="btn ghost" onClick={p.onCancel}>Done</button></div>
-      </div>
-    )
-  else if (mine === 'edit' && p.confirm?.date) {
-    const d = p.confirm.date
-    const logged = d in h.logs
-    const now = dayResult(h, d) ? 'a good day' : 'a slip'
-    extra = (
-      <div className="note align">
-        <p><b>Edit {dayLabel(d)}</b></p>
-        <p>Right now it counts as {now}{logged ? ' (logged)' : modeOn(h, d) === 'auto' ? ' (automatic)' : ' (nothing logged)'}.</p>
-        <p>Are you sure you want to manually modify this day? Try to be accurate with yourself. Edited days show an M.</p>
-        <div className="row">
-          <button className="btn primary" onClick={() => p.onEditDay(d, true)}>Mark as done</button>
-          <button className="btn slip" onClick={() => p.onEditDay(d, false)}>Mark as slipped</button>
-          {logged && <button className="btn ghost" onClick={() => p.onEditDay(d, null)}>Back to {modeOn(h, d) === 'auto' ? 'automatic' : 'unlogged'}</button>}
-          <button className="btn ghost" onClick={p.onCancel}>Cancel</button>
+        <label className="field" htmlFor={`start-${h.id}`}>
+          Started on
+          <DatePick
+            id={`start-${h.id}`} value={h.periods[0]?.start ?? today} min={addDays(today, -1825)} max={h.periods[0]?.end ?? today}
+            label="Started on" onChange={p.onSetStart}
+          />
+          <span className="hint">Moving it earlier counts those days as done, and you can fix any day. Moving it later stops counting the days before it. Be honest with yourself. The best results come from accuracy.</span>
+        </label>
+        <div className="row" style={{ marginTop: 10 }}>
+          <button className="btn primary" onClick={() => p.onAsk('calendar')}>Open calendar</button>
+          <button className="btn ghost" onClick={p.onCancel}>Done</button>
         </div>
       </div>
     )
-  } else if (mine === 'archive')
+  else if (mine === 'edit' && p.confirm?.date) extra = editPanel(p.confirm.date, p.onCancel)
+  else if (mine === 'calendar')
+    extra = (
+      <div className="note align">
+        <p><b>{h.name} calendar</b></p>
+        <p className="hint" style={{ margin: '0 0 8px' }}>Tap a colored day to change it. Be honest with yourself. The best results come from accuracy.</p>
+        <Calendar habit={h} today={today} selected={p.confirm?.date} onPick={(d) => p.onAsk('calendar', d)} />
+        {p.confirm?.date && editPanel(p.confirm.date, () => p.onAsk('calendar'))}
+        <div className="row" style={{ marginTop: 10 }}><button className="btn ghost" onClick={p.onCancel}>Close</button></div>
+      </div>
+    )
+  else if (mine === 'archive')
     extra = (
       <div className="note align">
         <p><b>Archive "{h.name}"?</b></p>
@@ -187,7 +213,8 @@ export function HabitCard(p: Props) {
       )}
       <p className="mode-line">
         {MODE_COPY[mode].title}: {MODE_COPY[mode].blurb}{' '}
-        <button className="link inline" onClick={() => p.onAsk('settings')}>Change</button>
+        <button className="link inline" onClick={() => p.onAsk('settings')}>Change</button>{' · '}
+        <button className="link inline" onClick={() => p.onAsk('calendar')}>Calendar</button>
       </p>
     </article>
   )
