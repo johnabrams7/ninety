@@ -2,6 +2,8 @@
 
 **A habit tracker built around a percentage, not a streak.**
 
+**Live demo: [ninety-habits.netlify.app](https://ninety-habits.netlify.app/)**
+
 This app is not about perfection. At least 90% is the goal. 100% is great too, but it is not required. Ninety is an alternative to perfection streaks, built to help mitigate the abstinence violation effect, where a single slip spirals into giving up entirely.
 
 Most habit apps punish you the moment a streak breaks. Ninety assumes real life is noisy. It tracks adherence as a percentage, and when you slip it shows exactly how many clean days it takes to get back above the line.
