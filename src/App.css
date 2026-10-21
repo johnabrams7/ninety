@@ -1,0 +1,7 @@
+main { max-width: 440px; margin: 0 auto; padding: 16px; display: grid; gap: 14px; text-align: left; }
+.habit { border: 2px solid #ccc; border-radius: 20px; padding: 14px; display: grid; gap: 6px; }
+.habit.habit { border-color: #0eb585; } .habit.building { border-color: #f29a0a; } .habit.lapsed { border-color: #f2466a; }
+.pct { font-size: 44px; font-weight: 800; margin: 0; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.auth { display: grid; gap: 12px; } .auth label { display: grid; gap: 4px; }
+.link { background: none; border: 0; text-decoration: underline; cursor: pointer; justify-self: start; }
