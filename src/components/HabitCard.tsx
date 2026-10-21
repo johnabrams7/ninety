@@ -1,13 +1,21 @@
 import { useState } from 'react'
 import {
-  EARLY_WARNING_DAYS, addDays, adherence, band, daysToRecover, daysUntilResetAllowed,
-  habitAgeDays, slackDays, streaks, type Band, type DateStr, type Habit,
+  EARLY_WARNING_DAYS, addDays, adherence, band, currentMode, dayResult, daysToRecover, daysUntilResetAllowed,
+  habitAgeDays, modeOn, slackDays, streaks, type Band, type DateStr, type Habit, type LoggingMode,
 } from '../engine'
 import { Ring } from './Ring'
 
 export const HUES = ['#6a5cff', '#12a8c9', '#e8528f', '#f08a24', '#3e9b4f']
 export const BAND_LABEL: Record<Band, string> = { habit: 'In the zone', building: 'Building', lapsed: 'Lapsed' }
-export type Confirm = { id: string; type: 'archive' | 'restart' | 'delete' } | null
+export type Confirm = { id: string; type: 'archive' | 'restart' | 'delete' | 'settings' | 'edit'; date?: DateStr } | null
+
+export const MODE_COPY: Record<LoggingMode, { title: string; blurb: string }> = {
+  auto: { title: 'Auto-track', blurb: 'Days count automatically. Just mark your slips.' },
+  manual: { title: 'Manual log', blurb: 'You log each day. Days you skip count as misses.' },
+}
+
+const dayLabel = (d: DateStr) =>
+  new Date(`${d}T00:00:00Z`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' })
 
 interface Props {
   habit: Habit
@@ -16,20 +24,32 @@ interface Props {
   showStreaks: boolean
   confirm: Confirm
   onLog: (v: boolean) => void
-  onAsk: (type: 'archive' | 'restart' | 'delete') => void
+  onAsk: (type: 'archive' | 'restart' | 'delete' | 'settings' | 'edit', date?: DateStr) => void
+  onSetMode: (mode: LoggingMode) => void
+  onEditDay: (date: DateStr, value: boolean | null) => void
   onCancel: () => void
   onArchive: () => void
   onRestartFresh: (reflection: string) => void
 }
 
-function Strip({ habit, today }: { habit: Habit; today: DateStr }) {
+function Strip({ habit, today, selected, onPick }: { habit: Habit; today: DateStr; selected?: DateStr; onPick: (d: DateStr) => void }) {
   const cells = []
   for (let i = 13; i >= 0; i--) {
     const d = addDays(today, -i)
     const active = habit.periods.some((p) => d >= p.start && d <= (p.end ?? today))
-    let cls = ''
-    if (active) cls = d in habit.logs ? (habit.logs[d] ? 'hit' : 'miss') : d === today ? 'pending' : 'miss'
-    cells.push(<i key={d} className={cls} title={d} />)
+    if (!active) { cells.push(<i key={d} />); continue }
+    const isToday = d === today
+    const cls = isToday ? (d in habit.logs ? (habit.logs[d] ? 'hit' : 'miss') : 'pending') : dayResult(habit, d) ? 'hit' : 'miss'
+    if (isToday) { cells.push(<i key={d} className={cls} title={`${dayLabel(d)} (today)`} />); continue }
+    const edited = habit.edited?.[d] === true
+    cells.push(
+      <button
+        key={d} type="button" className={`cell ${cls}${edited ? ' edited' : ''}${selected === d ? ' sel' : ''}`}
+        title={`${dayLabel(d)}: ${cls === 'hit' ? 'good day' : 'slip'}${edited ? ' (edited)' : ''}. Tap to edit.`}
+        aria-label={`${dayLabel(d)}, ${cls === 'hit' ? 'good day' : 'slip'}${edited ? ', edited' : ''}. Edit this day.`}
+        onClick={() => onPick(d)}
+      >{edited ? 'M' : ''}</button>,
+    )
   }
   return (
     <>
@@ -50,6 +70,7 @@ export function HabitCard(p: Props) {
   const age = habitAgeDays(h, today)
   const t = h.logs[today]
   const mine = p.confirm?.type
+  const mode = currentMode(h)
 
   let note
   if (a.total === 0) note = <p><b>Day one.</b> Log today to start your percentage.</p>
@@ -69,7 +90,37 @@ export function HabitCard(p: Props) {
     )
 
   let extra = null
-  if (mine === 'archive')
+  if (mine === 'settings')
+    extra = (
+      <div className="note align">
+        <p><b>How do you track "{h.name}"?</b></p>
+        <div className="seg" role="group" aria-label="Tracking mode">
+          {(['auto', 'manual'] as LoggingMode[]).map((m) => (
+            <button key={m} type="button" aria-pressed={mode === m} onClick={() => p.onSetMode(m)}>{MODE_COPY[m].title}</button>
+          ))}
+        </div>
+        <p className="hint" style={{ margin: '8px 0' }}>{MODE_COPY[mode].blurb} Changes apply from today forward. Days already counted are not re-scored.</p>
+        <div className="row"><button className="btn ghost" onClick={p.onCancel}>Done</button></div>
+      </div>
+    )
+  else if (mine === 'edit' && p.confirm?.date) {
+    const d = p.confirm.date
+    const logged = d in h.logs
+    const now = dayResult(h, d) ? 'a good day' : 'a slip'
+    extra = (
+      <div className="note align">
+        <p><b>Edit {dayLabel(d)}</b></p>
+        <p>Right now it counts as {now}{logged ? ' (logged)' : modeOn(h, d) === 'auto' ? ' (automatic)' : ' (nothing logged)'}.</p>
+        <p>Are you sure you want to manually modify this day? Try to be accurate with yourself. Edited days show an M.</p>
+        <div className="row">
+          <button className="btn primary" onClick={() => p.onEditDay(d, true)}>Mark as done</button>
+          <button className="btn slip" onClick={() => p.onEditDay(d, false)}>Mark as slipped</button>
+          {logged && <button className="btn ghost" onClick={() => p.onEditDay(d, null)}>Back to {modeOn(h, d) === 'auto' ? 'automatic' : 'unlogged'}</button>}
+          <button className="btn ghost" onClick={p.onCancel}>Cancel</button>
+        </div>
+      </div>
+    )
+  } else if (mine === 'archive')
     extra = (
       <div className="note align">
         <p><b>Archive "{h.name}"?</b></p>
@@ -121,13 +172,23 @@ export function HabitCard(p: Props) {
           {p.showStreaks && <><div className="stat"><b>{st.current}</b><span>streak</span></div><div className="stat"><b>{st.longest}</b><span>best streak</span></div></>}
         </div>
       </div>
-      <Strip habit={h} today={today} />
+      <Strip habit={h} today={today} selected={p.confirm?.type === 'edit' ? p.confirm.date : undefined} onPick={(d) => p.onAsk('edit', d)} />
       <div className="note">{note}</div>
       {extra}
-      <div className="actions">
-        <button className="btn done" aria-pressed={t === true} onClick={() => p.onLog(true)}>{t === true ? 'Done today ✓' : 'Done today'}</button>
-        <button className="btn slip" aria-pressed={t === false} onClick={() => p.onLog(false)}>Slipped</button>
-      </div>
+      {mode === 'auto' ? (
+        <div className="actions single">
+          <button className="btn slip" aria-pressed={t === false} onClick={() => p.onLog(false)}>{t === false ? 'Slipped today. Tap to undo' : 'I slipped today'}</button>
+        </div>
+      ) : (
+        <div className="actions">
+          <button className="btn done" aria-pressed={t === true} onClick={() => p.onLog(true)}>{t === true ? 'Done today ✓' : 'Done today'}</button>
+          <button className="btn slip" aria-pressed={t === false} onClick={() => p.onLog(false)}>Slipped</button>
+        </div>
+      )}
+      <p className="mode-line">
+        {MODE_COPY[mode].title}: {MODE_COPY[mode].blurb}{' '}
+        <button className="link inline" onClick={() => p.onAsk('settings')}>Change</button>
+      </p>
     </article>
   )
 }

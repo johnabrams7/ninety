@@ -1,25 +1,28 @@
 import { useState, type FormEvent } from 'react'
-import type { HabitKind } from '../engine'
+import { defaultModeFor, type HabitKind, type LoggingMode } from '../engine'
+import { MODE_COPY } from './HabitCard'
 
 const COMMON = ['Walk 20 minutes', 'Drink water', 'Stretch', 'Read 10 pages', 'Sleep by 11', 'No sugar']
 const REPLACE = ['Walk 20 minutes', 'Stretch', 'Read 10 pages', 'Call a friend']
 
-export function AddSheet({ onAdd, onCancel }: { onAdd: (name: string, kind: HabitKind, pair: string) => void; onCancel: () => void }) {
+export function AddSheet({ onAdd, onCancel }: { onAdd: (name: string, kind: HabitKind, pair: string, mode: LoggingMode) => void; onCancel: () => void }) {
   const [kind, setKind] = useState<HabitKind>('add')
+  const [mode, setMode] = useState<LoggingMode>(defaultModeFor('add'))
   const [name, setName] = useState('')
   const [pair, setPair] = useState('')
 
+  const pickKind = (k: HabitKind) => { setKind(k); setMode(defaultModeFor(k)); setPair('') }
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    if (name.trim()) onAdd(name.trim(), kind, kind === 'remove' ? pair : '')
+    if (name.trim()) onAdd(name.trim(), kind, kind === 'remove' ? pair : '', mode)
   }
 
   return (
     <form className="sheet" onSubmit={submit} aria-label="Add a habit">
       <h2>New habit</h2>
       <div className="seg" role="group" aria-label="Type">
-        <button type="button" aria-pressed={kind === 'add'} onClick={() => { setKind('add'); setPair('') }}>Add something</button>
-        <button type="button" aria-pressed={kind === 'remove'} onClick={() => { setKind('remove'); setPair('') }}>Quit something</button>
+        <button type="button" aria-pressed={kind === 'add'} onClick={() => pickKind('add')}>Add something</button>
+        <button type="button" aria-pressed={kind === 'remove'} onClick={() => pickKind('remove')}>Quit something</button>
       </div>
       <label className="field" htmlFor="new-name">
         Name
@@ -36,6 +39,17 @@ export function AddSheet({ onAdd, onCancel }: { onAdd: (name: string, kind: Habi
           <div className="chips">{REPLACE.map((c) => <button type="button" key={c} className="chip" aria-pressed={pair === c} onClick={() => setPair(pair === c ? '' : c)}>{c}</button>)}</div>
         </div>
       )}
+      <div>
+        <p className="hint" style={{ marginBottom: 8 }}>How do you want to track it? You can change this later.</p>
+        <div className="modes" role="group" aria-label="Tracking mode">
+          {(['auto', 'manual'] as LoggingMode[]).map((m) => (
+            <button type="button" key={m} className="mode" aria-pressed={mode === m} onClick={() => setMode(m)}>
+              <b>{MODE_COPY[m].title}{defaultModeFor(kind) === m ? ' (recommended)' : ''}</b>
+              <span>{MODE_COPY[m].blurb}</span>
+            </button>
+          ))}
+        </div>
+      </div>
       <div className="row"><button type="submit" className="btn primary">Start tracking</button><button type="button" className="btn ghost" onClick={onCancel}>Cancel</button></div>
     </form>
   )

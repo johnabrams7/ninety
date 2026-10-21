@@ -10,7 +10,7 @@ export default function App() {
     return <div className="app"><p className="error">Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env.local (see README), then restart the dev server.</p></div>
   if (session === undefined) return <div className="app"><p className="hint">Loading…</p></div>
   if (session === null)
-    return <div className="app"><header className="top"><div className="brand">Ninety<small>Aim for 90%+. Perfection is not the goal.</small></div></header><AuthForm /></div>
+    return <div className="app"><header className="top"><div className="brand">Ninety<small>Aim for 90%+. Perfect is not the goal.</small></div></header><AuthForm /></div>
 
   return (
     <div className="app">

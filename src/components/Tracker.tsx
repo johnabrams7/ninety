@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { addHabit, archiveHabit, deleteHabit, fetchHabits, resetHabit, restartHabit, setLog } from '../data/repo'
-import { band, daysToRecover, globalAdherence, isArchived, localToday, type Habit, type HabitKind } from '../engine'
+import { addHabit, archiveHabit, deleteHabit, fetchHabits, resetHabit, restartHabit, setLog, setModeHistory } from '../data/repo'
+import { band, currentMode, daysToRecover, globalAdherence, isArchived, localToday, setMode, type Habit, type HabitKind, type LoggingMode } from '../engine'
 import { AddSheet } from './AddSheet'
 import { ArchiveCard, BAND_LABEL, HabitCard, type Confirm } from './HabitCard'
 import { Ring } from './Ring'
@@ -46,12 +46,19 @@ export function Tracker() {
     try { localStorage.setItem(STREAK_KEY, next ? '1' : '0') } catch { /* storage unavailable */ }
   }
 
-  const add = (name: string, kind: HabitKind, pair: string) => {
+  const add = (name: string, kind: HabitKind, pair: string, mode: LoggingMode) => {
     setAdding(false)
     void run(async () => {
-      await addHabit(name, kind, today)
-      if (pair) await addHabit(pair, 'add', today)
+      await addHabit(name, kind, today, mode)
+      if (pair) await addHabit(pair, 'add', today, 'manual')
     })
+  }
+
+  // Mode changes keep the card's settings panel open so the new choice is visible.
+  const changeMode = (h: Habit, mode: LoggingMode) => {
+    const next = setMode(h, mode, today)
+    setError('')
+    void setModeHistory(h.id, next.modeHistory ?? []).then(refresh).catch((e: Error) => setError(e.message))
   }
 
   const log = (h: Habit, v: boolean) => void run(() => setLog(h.id, today, h.logs[today] === v ? null : v))
@@ -65,7 +72,7 @@ export function Tracker() {
   return (
     <>
       <header className="top">
-        <div className="brand">Ninety<small>Aim for 90%+. Perfection is not the goal.</small></div>
+        <div className="brand">Ninety<small>Aim for 90%+. Perfect is not the goal.</small></div>
         <button className="add-btn" onClick={() => { setAdding(true); setTab('today') }}>+ Habit</button>
       </header>
 
@@ -89,10 +96,12 @@ export function Tracker() {
           key={h.id} habit={h} index={all.indexOf(h)} today={today} showStreaks={showStreaks}
           confirm={confirm?.id === h.id ? confirm : null}
           onLog={(v) => log(h, v)}
-          onAsk={(type) => setConfirm({ id: h.id, type })}
+          onAsk={(type, date) => setConfirm({ id: h.id, type, date })}
+          onSetMode={(mode) => changeMode(h, mode)}
+          onEditDay={(date, value) => void run(() => setLog(h.id, date, value, value !== null))}
           onCancel={() => setConfirm(null)}
           onArchive={() => void run(() => archiveHabit(h.id, today))}
-          onRestartFresh={(why) => void run(() => resetHabit(h.id, today, why))}
+          onRestartFresh={(why) => void run(() => resetHabit(h.id, today, why, [{ from: today, mode: currentMode(h) }]))}
         />
       ))}
 

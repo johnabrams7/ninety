@@ -149,3 +149,16 @@ label.field { display: grid; gap: 6px; font-weight: 700; font-size: 13px; }
 .auth-msg { margin: 0; color: var(--muted); font-size: 13px; }
 .sheet input[type="email"], .sheet input[type="password"] { width: 100%; font: inherit; color: var(--fg); background: var(--bg); border: 2px solid var(--line); border-radius: 14px; padding: 12px 14px; }
 .error { background: var(--bad-soft); color: var(--bad); border-radius: 14px; padding: 10px 14px; font-weight: 700; margin: 0; }
+
+.strip .cell { aspect-ratio: 1; border-radius: 6px; background: var(--track); display: grid; place-content: center; padding: 0; font-size: 9px; font-weight: 800; color: #fff; line-height: 1; }
+.strip .cell.hit { background: var(--good); }
+.strip .cell.miss { background: var(--bad); }
+.strip .cell.sel { outline: 3px solid var(--accent); outline-offset: 1px; }
+.strip .cell.edited { box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .55); }
+.actions.single { grid-template-columns: 1fr; }
+.mode-line { margin: 0; color: var(--muted); font-size: 12.5px; }
+.link.inline { display: inline; padding: 0 2px; text-decoration: underline; font-size: inherit; }
+.modes { display: grid; gap: 8px; }
+.mode { text-align: left; display: grid; gap: 2px; padding: 12px 14px; border-radius: 16px; background: var(--track); border: 2px solid transparent; }
+.mode span { font-size: 13px; color: var(--muted); }
+.mode[aria-pressed="true"] { border-color: var(--accent); background: var(--card); }
