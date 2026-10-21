@@ -7,6 +7,8 @@ create table if not exists public.habits (
   name       text not null check (char_length(name) between 1 and 60),
   kind       text not null check (kind in ('add', 'remove')),
   category   text,
+  -- Logging mode over time: [{"from": "2026-10-21", "mode": "auto" | "manual"}]. Empty = manual.
+  mode_history jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now()
 );
 
@@ -27,6 +29,8 @@ create table if not exists public.habit_logs (
   user_id   uuid not null default auth.uid() references auth.users (id) on delete cascade,
   log_date  date not null,
   adhered   boolean not null,
+  -- true when the entry was changed after the fact (shows an "M" badge)
+  edited    boolean not null default false,
   primary key (habit_id, log_date)
 );
 
